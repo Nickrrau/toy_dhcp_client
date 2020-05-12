@@ -25,46 +25,17 @@ func main() {
 	index, err := strconv.Atoi(string(input[0]))
 	fail(err)
 
-	// conn, err := net.Dial("udp", "255.255.255.255:67")
-	// defer conn.Close()
-	// if err != nil {
-	// fmt.Printf("Closing Connecting: %v\n", err)
-	// os.Exit(1)
-	// }
-	//
-	// fmt.Println("Creating Msg")
-	//
-	// ops := []DHCPOption{
-	// DHCP_MSG_TYPE_DISCOVER,
-	// DHCP_MAX_MSG_SIZE,
-	// DHCP_PARAM_REQ_LIST,
-	// DHCP_CLIENT_ID,
-	// DHCP_END,
-	// }
-	//
-	// msg := NewDiscoverMsg(ints[index].HardwareAddr, ops)
-	// fmt.Println("Writing to Conn")
-	// err = msg.WriteToConn(conn)
-	// if err != nil {
-	// fmt.Printf("Closing Connecting: %v\n", err)
-	// os.Exit(1)
-	// }
-	//
-	// fmt.Println(net.Interfaces())
-	//
-	// listener, err := net.ListenUDP("udp", &net.UDPAddr{Port: 68})
-	// fail(err)
-	//
-	// status, err := bufio.NewReader(listener).ReadBytes(255)
-	// fmt.Println(status)
-
-	client := NewClient(ints[index])
-	go client.Init()
-
-	for {
-		client.Status()
+	ops := []DHCPOption{
+		DHCP_MSG_TYPE_DISCOVER,
+		DHCP_MAX_MSG_SIZE,
+		DHCP_PARAM_REQ_LIST,
+		DHCP_CLIENT_ID,
+		DHCP_END,
 	}
 
+	client := NewClient(ints[index], ops)
+
+	client.Run()
 }
 
 func fail(err error) {
