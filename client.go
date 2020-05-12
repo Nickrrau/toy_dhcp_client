@@ -110,7 +110,6 @@ func (cl *DHCPClient) discover() {
 }
 
 func (cl *DHCPClient) parseMsg(data []byte) (DHCPMsg, error) {
-
 	//TODO: Replace this with a method on DHCPMsg
 	var msg DHCPMsg
 	var err error
@@ -173,8 +172,4 @@ func (cl *DHCPClient) Run() {
 		} //TODO: Wait before Retry
 		//TODO: Fail on N Retries
 	}
-}
-
-func (cl *DHCPClient) State() ClientState {
-	return cl.state
 }
