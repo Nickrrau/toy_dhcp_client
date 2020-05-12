@@ -13,26 +13,45 @@ type DHCPMsg struct {
 	HardwareLength byte
 	Hops           byte
 
-	XID [4]byte
+	XID []byte
 
-	ElapsedTime [2]byte
+	ElapsedTime []byte
 
-	Flags [2]byte
+	Flags []byte
 
 	//TODO: Use Go IP struct and preform the conversions to byte arrays later
-	ClientAddr  [4]byte
-	YourAddr    [4]byte
-	ServerAddr  [4]byte
-	GatewayAddr [4]byte
+	ClientAddr  []byte
+	YourAddr    []byte
+	ServerAddr  []byte
+	GatewayAddr []byte
 
-	ClientHardwareAddr [16]byte
+	ClientHardwareAddr []byte
 
-	ServerName [64]byte
-	File       [128]byte
+	ServerName []byte
+	File       []byte
 
-	Magic [4]byte
+	Magic []byte
 
 	Options []DHCPOption
+
+	RawBody    []byte
+	RawOptions []byte
+}
+
+func NewDHCPMsg() *DHCPMsg {
+	return &DHCPMsg{
+		XID:                make([]byte, 4),
+		ElapsedTime:        make([]byte, 2),
+		Flags:              make([]byte, 2),
+		ClientAddr:         make([]byte, 4),
+		YourAddr:           make([]byte, 4),
+		ServerAddr:         make([]byte, 4),
+		GatewayAddr:        make([]byte, 4),
+		ClientHardwareAddr: make([]byte, 16),
+		ServerName:         make([]byte, 64),
+		File:               make([]byte, 128),
+		Magic:              make([]byte, 4),
+	}
 }
 
 func (msg *DHCPMsg) String() string {
@@ -49,45 +68,39 @@ func (msg *DHCPMsg) String() string {
 	)
 }
 
-func NewDiscoverMsg(hwaddr []byte, ops []DHCPOption) DHCPMsg {
-	var mac = [16]byte{}
-	copy(mac[:], hwaddr)
-	fmt.Println(hwaddr)
-	return DHCPMsg{
-		MsgType:            BOOT_REQEUST,
-		HardwareType:       ETHERNET,
-		HardwareLength:     6,
-		Hops:               0,
-		XID:                DHCP_XID,
-		Flags:              [2]byte{0, 0},
-		ClientHardwareAddr: mac,
-		Magic:              DHCP_MAGIC,
-		Options:            ops,
-	}
+func NewDiscoverMsg(hwaddr []byte, ops []DHCPOption) *DHCPMsg {
+	msg := NewDHCPMsg()
+	msg.MsgType = BOOT_REQEUST
+	msg.HardwareType = ETHERNET
+	msg.HardwareLength = 6
+	msg.XID = DHCP_XID
+	msg.Magic = DHCP_MAGIC
+	msg.Options = ops
+
+	copy(msg.ClientHardwareAddr, hwaddr)
+
+	return msg
 }
 
 func (msg *DHCPMsg) WriteToConn(conn net.Conn) error {
 	writer := bufio.NewWriter(conn)
 
-	// err := binary.Write(writer, binary.BigEndian, msg)
-
-	//TODO: Can't use the binary encoder package with slice for variable length options, manually writing fields solves the issue but at the cost of not being very friendly code...
 	err := writer.WriteByte(byte(msg.MsgType))
 	err = writer.WriteByte(byte(msg.HardwareType))
 	err = writer.WriteByte(msg.HardwareLength)
 	err = writer.WriteByte(msg.Hops)
 
-	_, err = writer.Write(msg.XID[:]) // Converting fixed array into slice? Probably not good
-	_, err = writer.Write(msg.ElapsedTime[:])
-	_, err = writer.Write(msg.Flags[:])
-	_, err = writer.Write(msg.ClientAddr[:])
-	_, err = writer.Write(msg.YourAddr[:])
-	_, err = writer.Write(msg.ServerAddr[:])
-	_, err = writer.Write(msg.GatewayAddr[:])
-	_, err = writer.Write(msg.ClientHardwareAddr[:])
-	_, err = writer.Write(msg.ServerName[:])
-	_, err = writer.Write(msg.File[:])
-	_, err = writer.Write(msg.Magic[:])
+	_, err = writer.Write(msg.XID)
+	_, err = writer.Write(msg.ElapsedTime)
+	_, err = writer.Write(msg.Flags)
+	_, err = writer.Write(msg.ClientAddr)
+	_, err = writer.Write(msg.YourAddr)
+	_, err = writer.Write(msg.ServerAddr)
+	_, err = writer.Write(msg.GatewayAddr)
+	_, err = writer.Write(msg.ClientHardwareAddr)
+	_, err = writer.Write(msg.ServerName)
+	_, err = writer.Write(msg.File)
+	_, err = writer.Write(msg.Magic)
 
 	if err != nil {
 		writer.Reset(conn)
