@@ -35,6 +35,10 @@ type DHCPMsg struct {
 	Options []DHCPOption
 }
 
+func (msg *DHCPMsg) String() string {
+	return fmt.Sprintf("Message type: %v\nHardware Type: %v\nXID: %v\nClient IP: %v\nYour IP: %v\nServer IP: %v\nClient Hardware Address: %v\n", msg.MsgType, msg.HardwareType, msg.XID, msg.ClientAddr, msg.YourAddr, msg.ServerAddr, msg.ClientHardwareAddr)
+}
+
 func NewDiscoverMsg(hwaddr []byte, ops []DHCPOption) DHCPMsg {
 	var mac = [16]byte{}
 	copy(mac[:], hwaddr)
