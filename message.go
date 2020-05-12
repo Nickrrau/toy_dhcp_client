@@ -36,7 +36,17 @@ type DHCPMsg struct {
 }
 
 func (msg *DHCPMsg) String() string {
-	return fmt.Sprintf("Message type: %v\nHardware Type: %v\nXID: %v\nClient IP: %v\nYour IP: %v\nServer IP: %v\nClient Hardware Address: %v\n", msg.MsgType, msg.HardwareType, msg.XID, msg.ClientAddr, msg.YourAddr, msg.ServerAddr, msg.ClientHardwareAddr)
+	return fmt.Sprintf("Message type: %v\nHardware Type: %v\nXID: %v\nClient IP: %v\nYour IP: %v\nServer IP: %v\nClient Hardware Address: %v\nServer Name: %v\nFile: %v\n",
+		msg.MsgType,
+		msg.HardwareType,
+		msg.XID,
+		msg.ClientAddr,
+		msg.YourAddr,
+		msg.ServerAddr,
+		msg.ClientHardwareAddr,
+		msg.ServerName,
+		msg.File,
+	)
 }
 
 func NewDiscoverMsg(hwaddr []byte, ops []DHCPOption) DHCPMsg {
