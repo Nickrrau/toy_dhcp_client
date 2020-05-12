@@ -55,16 +55,17 @@ func NewDHCPMsg() *DHCPMsg {
 }
 
 func (msg *DHCPMsg) String() string {
-	return fmt.Sprintf("Message type: %v\nHardware Type: %v\nXID: %v\nClient IP: %v\nYour IP: %v\nServer IP: %v\nClient Hardware Address: %v\nServer Name: %v\nFile: %v\n",
+	return fmt.Sprintf("Message type: %v\nHardware Type: %v\nHardware Length: %v\nXID: %v\nClient IP: %v\nYour IP: %v\nServer IP: %v\nGateway IP: %v\nClient Hardware Address: %v\nOptions: %v\n",
 		msg.MsgType,
 		msg.HardwareType,
+		msg.HardwareLength,
 		msg.XID,
 		msg.ClientAddr,
 		msg.YourAddr,
 		msg.ServerAddr,
+		msg.GatewayAddr,
 		msg.ClientHardwareAddr,
-		msg.ServerName,
-		msg.File,
+		msg.Options,
 	)
 }
 
