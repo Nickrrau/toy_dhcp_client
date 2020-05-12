@@ -1,0 +1,18 @@
+package main
+
+type HardwareType byte
+
+const (
+	ETHERNET HardwareType = iota + 1
+	EXPERIMENTAL_ETHERNET
+	AMATEUR_RADIO
+	PRONET
+	CHAOS
+	IEE802
+	ARCNET
+	HYPER_CHANNEL
+	LANSTAR
+	AUTONET
+	LOCAL_TALK
+	LOCAL_NET
+)
