@@ -20,37 +20,125 @@ const (
 	DHCP_CLIENT_REQUESTING
 	DHCP_CLIENT_ACCEPTACK
 	DHCP_CLIENT_ACKED
+	DHCP_CLIENT_FATAL
 )
 
 type DHCPClient struct {
-	status   chan ClientState
+	state    ClientState
 	iface    net.Interface
-	IP       net.IP
-	ServerIP net.IP
-	XID      [4]byte
+	ip       net.IP
+	serverIP net.IP
+	xid      []byte
+	ops      []DHCPOption
 }
 
-func NewClient(iface net.Interface) *DHCPClient {
+func NewClient(iface net.Interface, ops []DHCPOption) *DHCPClient {
 	return &DHCPClient{
-		iface:  iface,
-		status: make(chan ClientState),
+		iface: iface,
+		state: DHCP_CLIENT_UNINITIALIZED,
+		ops:   ops,
+		xid:   DHCP_XID,
 	}
 }
 
-func (cl *DHCPClient) listener() {
+func (cl *DHCPClient) IP() net.IP {
+	//TODO: Copy
+	return cl.ip //Possible race?
+}
+func (cl *DHCPClient) SIP() net.IP {
+	//TODO: Copy
+	return cl.serverIP //Possible race?
+}
+func (cl *DHCPClient) XID() []byte {
+	var b []byte
+	copy(b, cl.xid[:])
+	return b
+}
 
+//Connection related
+
+func (cl *DHCPClient) listen() (DHCPMsg, error) {
+	listener, err := net.ListenUDP("udp", &net.UDPAddr{Port: 68}) //TODO: Set Timeout
+	defer listener.Close()
+	fail(err)
+	for {
+		reader := bufio.NewReader(listener)
+		status := make([]byte, reader.Size())
+		_, err := reader.Read(status)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		switch cl.state {
+		case DHCP_CLIENT_DISCOVERING:
+			if MessageType(status[0]) == BOOT_REPLY && bytes.Compare(status[4:8], cl.xid) == 0 { //TODO: Move this check into parseMsg so that we can get rid of the duped code
+				return cl.parseMsg(status)
+			} else {
+				return DHCPMsg{}, errors.New("Incorrect Message Type, Ignoring") //TODO: Make this more informative
+			}
+		case DHCP_CLIENT_REQUESTING:
+			fmt.Println(status[0])
+			if MessageType(status[0]) == BOOT_REPLY && bytes.Compare(status[4:8], cl.xid) == 0 { //TODO: Move this check into parseMsg so that we can get rid of the duped code
+				return cl.parseMsg(status)
+			} else {
+				return DHCPMsg{}, errors.New("Incorrect Message Type, Ignoring") //TODO: Make this more informative
+			}
+		default:
+			continue
+		}
+
+	}
 }
 
 func (cl *DHCPClient) discover() {
+	conn, err := net.Dial("udp", "255.255.255.255:67")
+	defer conn.Close()
+	if err != nil {
+		fmt.Printf("Closing Connecting: %v\n", err)
+		os.Exit(1)
+	}
+
+	msg := NewDiscoverMsg(cl.iface.HardwareAddr, cl.ops)
+	err = msg.WriteToConn(conn)
+	if err != nil {
+		fmt.Printf("Closing Connecting: %v\n", err)
+		os.Exit(1)
+	}
+
+	cl.state = DHCP_CLIENT_DISCOVERING
 
 }
 
 func (cl *DHCPClient) parseMsg(data []byte) (DHCPMsg, error) {
+
+	//TODO: Replace this with a method on DHCPMsg
 	var msg DHCPMsg
 	var err error
 
-	reader := bufio.NewReader(bytes.NewReader(data))
-	body := make([]byte)
+	msg.MsgType = MessageType(data[0])
+	msg.HardwareType = HardwareType(data[1])
+	msg.HardwareLength = data[2]
+	msg.Hops = data[3]
+	msg.XID = data[4:8]
+	msg.ElapsedTime = data[8:10]
+	msg.Flags = data[10:12]
+	msg.ClientAddr = data[12:16]
+	msg.YourAddr = data[16:20]
+	msg.ServerAddr = data[20:24]
+	msg.GatewayAddr = data[24:28]
+	msg.ClientHardwareAddr = data[28:44]
+	msg.ServerName = data[44:108]
+	msg.File = data[108:236]
+	msg.Magic = data[236:240]
+	msg.RawBody = data[:240]
+
+	msg.Options, err = OptionsFromBytes(data[240:])
+	if err != nil {
+		return msg, errors.New(fmt.Sprintf("Malformed Message:\n\tError = %v\n", err))
+	}
+	msg.RawOptions = data[240:]
+
+	return msg, nil
 }
 
 func (cl *DHCPClient) reply() {
@@ -61,9 +149,7 @@ func (cl *DHCPClient) acceptAck() {
 
 }
 
-func (cl *DHCPClient) Init() {
-	cl.status <- DHCP_CLIENT_UNINITIALIZED
-	cl.status <- DHCP_CLIENT_INITIALIZED
+func (cl *DHCPClient) Run() {
 	conn, err := net.Dial("udp", "255.255.255.255:67")
 	defer conn.Close()
 	if err != nil {
@@ -71,53 +157,24 @@ func (cl *DHCPClient) Init() {
 		os.Exit(1)
 	}
 
-	ops := []DHCPOption{
-		DHCP_MSG_TYPE_DISCOVER,
-		DHCP_MAX_MSG_SIZE,
-		DHCP_PARAM_REQ_LIST,
-		DHCP_CLIENT_ID,
-		DHCP_END,
-	}
-
-	msg := NewDiscoverMsg(cl.iface.HardwareAddr, ops)
+	msg := NewDiscoverMsg(cl.iface.HardwareAddr, cl.ops)
 	err = msg.WriteToConn(conn)
 	if err != nil {
 		fmt.Printf("Closing Connecting: %v\n", err)
 		os.Exit(1)
 	}
-	cl.status <- DHCP_CLIENT_DISCOVERING
 
-	listener, err := net.ListenUDP("udp", &net.UDPAddr{Port: 68})
-	fail(err)
+	cl.state = DHCP_CLIENT_DISCOVERING
 
-	status, err := bufio.NewReader(listener).ReadBytes(255)
-	cl.status <- DHCP_CLIENT_OFFERED
-	fmt.Println(status)
-	cl.status <- DHCP_CLIENT_REQUESTING
-	cl.status <- DHCP_CLIENT_ACCEPTACK
-	cl.status <- DHCP_CLIENT_ACKED
+	for parsed, err := cl.listen(); ; {
+		if err == nil {
+			fmt.Println(parsed.String())
+			break
+		} //TODO: Wait before Retry
+		//TODO: Fail on N Retries
+	}
 }
 
-func (cl *DHCPClient) Status() {
-	select {
-	case state := <-cl.status:
-		switch state {
-		case DHCP_CLIENT_UNINITIALIZED:
-			fmt.Println("Client is Uninitialized...")
-		case DHCP_CLIENT_INITIALIZED:
-			fmt.Println("Initializing Client...")
-		case DHCP_CLIENT_DISCOVERING:
-			fmt.Println("Discovering DHCP Server...")
-		case DHCP_CLIENT_OFFERED:
-			fmt.Println("Offer from Server (<IP>, <SERVERIP>)...")
-		case DHCP_CLIENT_REQUESTING:
-			fmt.Println("Replying to Server with Request for <IP>...")
-		case DHCP_CLIENT_ACCEPTACK:
-			fmt.Println("Waiting for ACK from Server...")
-		case DHCP_CLIENT_ACKED:
-			fmt.Println("Server ACKED...")
-		}
-	default:
-		//fmt.Println("Waiting...")
-	}
+func (cl *DHCPClient) State() ClientState {
+	return cl.state
 }
