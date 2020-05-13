@@ -9,6 +9,7 @@ import (
 	"toy_dhcp_client/message"
 )
 
+//Client.listen() listens on port 68 for broadcasted messages, messages are checked for correct message type and xid before commiting to parsing the full bytes.
 func (cl *Client) listen() (*message.DHCPMsg, error) {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: dhcpPortReceive}) //TODO: Set Timeout
 	if err != nil {
