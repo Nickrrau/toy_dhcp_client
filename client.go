@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
+	"./message"
 	"fmt"
 	"net"
-	"os"
 )
 
 type ClientState int
@@ -29,10 +26,10 @@ type DHCPClient struct {
 	ip       net.IP
 	serverIP net.IP
 	xid      []byte
-	ops      []DHCPOption
+	ops      []message.DHCPOption
 }
 
-func NewClient(iface net.Interface, ops []DHCPOption) *DHCPClient {
+func NewClient(iface net.Interface, ops []message.DHCPOption) *DHCPClient {
 	return &DHCPClient{
 		iface: iface,
 		state: DHCP_CLIENT_UNINITIALIZED,
@@ -56,90 +53,6 @@ func (cl *DHCPClient) XID() []byte {
 }
 
 //Connection related
-
-func (cl *DHCPClient) listen() (DHCPMsg, error) {
-	listener, err := net.ListenUDP("udp", &net.UDPAddr{Port: 68}) //TODO: Set Timeout
-	defer listener.Close()
-	fail(err)
-	for {
-		reader := bufio.NewReader(listener)
-		status := make([]byte, reader.Size())
-		_, err := reader.Read(status)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		switch cl.state {
-		case DHCP_CLIENT_DISCOVERING:
-			if MessageType(status[0]) == BOOT_REPLY && bytes.Compare(status[4:8], cl.xid) == 0 { //TODO: Move this check into parseMsg so that we can get rid of the duped code
-				return cl.parseMsg(status)
-			} else {
-				return DHCPMsg{}, errors.New("Incorrect Message Type, Ignoring") //TODO: Make this more informative
-			}
-		case DHCP_CLIENT_REQUESTING:
-			fmt.Println(status[0])
-			if MessageType(status[0]) == BOOT_REPLY && bytes.Compare(status[4:8], cl.xid) == 0 { //TODO: Move this check into parseMsg so that we can get rid of the duped code
-				return cl.parseMsg(status)
-			} else {
-				return DHCPMsg{}, errors.New("Incorrect Message Type, Ignoring") //TODO: Make this more informative
-			}
-		default:
-			continue
-		}
-
-	}
-}
-
-func (cl *DHCPClient) discover() {
-	conn, err := net.Dial("udp", "255.255.255.255:67")
-	defer conn.Close()
-	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
-		os.Exit(1)
-	}
-
-	msg := NewDiscoverMsg(cl.iface.HardwareAddr, cl.ops)
-	err = msg.WriteToConn(conn)
-	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
-		os.Exit(1)
-	}
-
-	cl.state = DHCP_CLIENT_DISCOVERING
-
-}
-
-func (cl *DHCPClient) parseMsg(data []byte) (DHCPMsg, error) {
-	//TODO: Replace this with a method on DHCPMsg
-	var msg DHCPMsg
-	var err error
-
-	msg.MsgType = MessageType(data[0])
-	msg.HardwareType = HardwareType(data[1])
-	msg.HardwareLength = data[2]
-	msg.Hops = data[3]
-	msg.XID = data[4:8]
-	msg.ElapsedTime = data[8:10]
-	msg.Flags = data[10:12]
-	msg.ClientAddr = data[12:16]
-	msg.YourAddr = data[16:20]
-	msg.ServerAddr = data[20:24]
-	msg.GatewayAddr = data[24:28]
-	msg.ClientHardwareAddr = data[28:44]
-	msg.ServerName = data[44:108]
-	msg.File = data[108:236]
-	msg.Magic = data[236:240]
-	msg.RawBody = data[:240]
-
-	msg.Options, err = OptionsFromBytes(data[240:])
-	if err != nil {
-		return msg, errors.New(fmt.Sprintf("Malformed Message:\n\tError = %v\n", err))
-	}
-	msg.RawOptions = data[240:]
-
-	return msg, nil
-}
-
 func (cl *DHCPClient) reply() {
 
 }
@@ -149,21 +62,7 @@ func (cl *DHCPClient) acceptAck() {
 }
 
 func (cl *DHCPClient) Run() {
-	conn, err := net.Dial("udp", "255.255.255.255:67")
-	defer conn.Close()
-	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
-		os.Exit(1)
-	}
-
-	msg := NewDiscoverMsg(cl.iface.HardwareAddr, cl.ops)
-	err = msg.WriteToConn(conn)
-	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
-		os.Exit(1)
-	}
-
-	cl.state = DHCP_CLIENT_DISCOVERING
+	cl.discover()
 
 	for parsed, err := cl.listen(); ; {
 		if err == nil {

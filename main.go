@@ -1,12 +1,16 @@
 package main
 
 import (
+	"./message"
 	"bufio"
-	// "encoding/binary"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
+)
+
+var (
+	DHCP_XID = []byte{23, 23, 43, 23}
 )
 
 func main() {
@@ -25,12 +29,12 @@ func main() {
 	index, err := strconv.Atoi(string(input[0]))
 	fail(err)
 
-	ops := []DHCPOption{
-		DHCP_MSG_TYPE_DISCOVER,
-		DHCP_MAX_MSG_SIZE,
-		DHCP_PARAM_REQ_LIST,
-		DHCP_CLIENT_ID,
-		DHCP_END,
+	ops := []message.DHCPOption{
+		message.DHCP_MSG_TYPE_DISCOVER,
+		message.DHCP_MAX_MSG_SIZE,
+		message.DHCP_PARAM_REQ_LIST,
+		message.DHCP_CLIENT_ID,
+		message.DHCP_END,
 	}
 
 	client := NewClient(ints[index], ops)

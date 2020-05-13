@@ -1,9 +1,13 @@
-package main
+package message
 
 import (
 	"bufio"
 	"fmt"
 	"net"
+)
+
+var (
+	DHCP_MAGIC = []byte{99, 130, 83, 99}
 )
 
 //TODO: Unexport these fields
@@ -69,12 +73,12 @@ func (msg *DHCPMsg) String() string {
 	)
 }
 
-func NewDiscoverMsg(hwaddr []byte, ops []DHCPOption) *DHCPMsg {
+func NewDiscoverMsg(xid, hwaddr []byte, ops []DHCPOption) *DHCPMsg {
 	msg := NewDHCPMsg()
 	msg.MsgType = BOOT_REQEUST
 	msg.HardwareType = ETHERNET
 	msg.HardwareLength = 6
-	msg.XID = DHCP_XID
+	msg.XID = xid
 	msg.Magic = DHCP_MAGIC
 	msg.Options = ops
 
@@ -115,4 +119,35 @@ func (msg *DHCPMsg) WriteToConn(conn net.Conn) error {
 
 	writer.Flush()
 	return err
+}
+
+
+func BytesToDHCPMsg(data []byte) (DHCPMsg, error){
+	var msg DHCPMsg
+	var err error
+
+	msg.MsgType = MessageType(data[0])
+	msg.HardwareType = HardwareType(data[1])
+	msg.HardwareLength = data[2]
+	msg.Hops = data[3]
+	msg.XID = data[4:8]
+	msg.ElapsedTime = data[8:10]
+	msg.Flags = data[10:12]
+	msg.ClientAddr = data[12:16]
+	msg.YourAddr = data[16:20]
+	msg.ServerAddr = data[20:24]
+	msg.GatewayAddr = data[24:28]
+	msg.ClientHardwareAddr = data[28:44]
+	msg.ServerName = data[44:108]
+	msg.File = data[108:236]
+	msg.Magic = data[236:240]
+	msg.RawBody = data[:240]
+
+	msg.Options, err = OptionsFromBytes(data[240:])
+	if err != nil {
+		return msg, err
+	}
+	msg.RawOptions = data[240:]
+
+	return msg, nil
 }

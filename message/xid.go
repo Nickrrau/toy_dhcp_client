@@ -1,4 +1,4 @@
-package main
+package message
 
 //TODO: Look for a config file
 
