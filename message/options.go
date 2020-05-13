@@ -8,6 +8,7 @@ const (
 	OPTION_DNS            OptionCode = 6
 	OPTION_DOMAIN_NAME    OptionCode = 15
 	OPTION_LEASE_TIME     OptionCode = 51
+	OPTION_REQUEST_IP     OptionCode = 50
 	OPTION_MSG_TYPE       OptionCode = 53
 	OPTION_SERVER_ID      OptionCode = 54
 	OPTION_MAX_MSG_SIZE   OptionCode = 57
@@ -17,26 +18,47 @@ const (
 )
 
 var (
-	DefaultOps = []Option {
+	DefaultDiscoverOps = []Option{
 		Option{
 			Code: OPTION_MSG_TYPE,
-			Len:    1,
-			Data:   []byte{1},
+			Len:  1,
+			Data: []byte{1},
 		},
 		Option{
 			Code: OPTION_MAX_MSG_SIZE,
-			Len:    2,
-			Data:   []byte{0x05, 0xdc},
+			Len:  2,
+			Data: []byte{0x05, 0xdc},
 		},
 		Option{
 			Code: OPTION_PARAM_REQ_LIST,
-			Len:    3,
-			Data:   []byte{1, 3, 6}, //Default to  Subnet Mask(1), Router IP(3), and DNS Server(s)(6)
+			Len:  3,
+			Data: []byte{1, 3, 6}, //Default to  Subnet Mask(1), Router IP(3), and DNS Server(s)(6)
 		},
 		Option{
 			Code: OPTION_CLIENT_ID,
-			Len:    5,
-			Data:   []byte{1, byte('D'), byte('E'), byte('M'), byte('O')},
+			Len:  5,
+			Data: []byte{1, byte('D'), byte('E'), byte('M'), byte('O')},
+		},
+		Option{
+			Code: OPTION_END,
+		},
+	}
+
+	DefaultRequestOps = []Option{
+		Option{
+			Code: OPTION_MSG_TYPE,
+			Len:  1,
+			Data: []byte{3},
+		},
+		Option{
+			Code: OPTION_MAX_MSG_SIZE,
+			Len:  2,
+			Data: []byte{0x05, 0xdc},
+		},
+		Option{
+			Code: OPTION_CLIENT_ID,
+			Len:  5,
+			Data: []byte{1, byte('D'), byte('E'), byte('M'), byte('O')},
 		},
 		Option{
 			Code: OPTION_END,
@@ -46,8 +68,8 @@ var (
 
 type Option struct {
 	Code OptionCode
-	Len    byte
-	Data   []byte
+	Len  byte
+	Data []byte
 }
 
 func NewOption(code OptionCode, data []byte) Option {
@@ -56,8 +78,8 @@ func NewOption(code OptionCode, data []byte) Option {
 	}
 	op := Option{
 		Code: code,
-		Len:    byte(len(data)),
-		Data:   data,
+		Len:  byte(len(data)),
+		Data: data,
 	}
 	return op
 }
