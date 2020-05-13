@@ -3,6 +3,7 @@ package toy_dhcp_client
 import (
 	"fmt"
 	"net"
+
 	"toy_dhcp_client/message"
 )
 
@@ -11,18 +12,18 @@ const (
 	dhcpPortReceive = 68
 )
 
-func (cl *Client) discover() error {
+func (cl *Client) discover(ops []message.Option) error {
 	conn, err := net.Dial("udp", broadcastAddr)
 	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
+		fmt.Printf("Closing Connection: %v\n", err)
 		return err
 	}
 	defer conn.Close()
 
-	msg := message.NewDiscoverMsg(cl.xid, cl.iface.HardwareAddr, cl.ops)
+	msg := message.NewBroadcastMsg(cl.xid, cl.iface.HardwareAddr, ops)
 	err = msg.WriteToConn(conn)
 	if err != nil {
-		fmt.Printf("Closing Connecting: %v\n", err)
+		fmt.Printf("Closing Connection: %v\n", err)
 		return err
 	}
 
