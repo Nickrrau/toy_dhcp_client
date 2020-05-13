@@ -73,7 +73,8 @@ func (msg *DHCPMsg) String() string {
 	)
 }
 
-func NewDiscoverMsg(xid, hwaddr []byte, ops []Option) *DHCPMsg {
+// NewDiscoverMsg() is a helper function that sets up a DHCPMsg struct for a Discover Message being broadcasted
+func NewBroadcastMsg(xid, hwaddr []byte, ops []Option) *DHCPMsg {
 	msg := NewDHCPMsg()
 	msg.MsgType = BOOT_REQEUST
 	msg.HardwareType = ETHERNET
@@ -121,8 +122,7 @@ func (msg *DHCPMsg) WriteToConn(conn net.Conn) error {
 	return err
 }
 
-
-func BytesToDHCPMsg(data []byte) (*DHCPMsg, error){
+func BytesToDHCPMsg(data []byte) (*DHCPMsg, error) {
 	msg := &DHCPMsg{}
 	var err error
 
