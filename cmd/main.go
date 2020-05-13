@@ -30,15 +30,7 @@ func main() {
 	index, err := strconv.Atoi(string(input[0]))
 	fail(err)
 
-	ops := []message.DHCPOption{
-		message.DHCP_MSG_TYPE_DISCOVER,
-		message.DHCP_MAX_MSG_SIZE,
-		message.DHCP_PARAM_REQ_LIST,
-		message.DHCP_CLIENT_ID,
-		message.DHCP_END,
-	}
-
-	client := toy.NewClient(ints[index], DHCP_XID, ops)
+	client := toy.NewClient(ints[index], DHCP_XID, message.DefaultOps)
 
 	client.Run()
 }
