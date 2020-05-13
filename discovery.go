@@ -1,9 +1,9 @@
-package main
+package toy_dhcp_client
 
 import (
-	"./message"
 	"fmt"
 	"net"
+	"toy_dhcp_client/message"
 )
 
 func (cl *DHCPClient) discover() error {

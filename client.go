@@ -1,7 +1,8 @@
-package main
+package toy_dhcp_client
 
 import (
-	"./message"
+	"toy_dhcp_client/message"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -29,12 +30,12 @@ type DHCPClient struct {
 	ops      []message.DHCPOption
 }
 
-func NewClient(iface net.Interface, ops []message.DHCPOption) *DHCPClient {
+func NewClient(iface net.Interface, xid []byte , ops []message.DHCPOption) *DHCPClient {
 	return &DHCPClient{
 		iface: iface,
 		state: DHCP_CLIENT_UNINITIALIZED,
 		ops:   ops,
-		xid:   DHCP_XID,
+		xid:   xid,
 	}
 }
 
@@ -61,8 +62,11 @@ func (cl *DHCPClient) acceptAck() {
 
 }
 
-func (cl *DHCPClient) Run() {
-	cl.discover()
+func (cl *DHCPClient) Run() error {
+	err := cl.discover()
+	if err != nil {
+		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
+	}
 
 	for parsed, err := cl.listen(); ; {
 		if err == nil {
@@ -71,4 +75,5 @@ func (cl *DHCPClient) Run() {
 		} //TODO: Wait before Retry
 		//TODO: Fail on N Retries
 	}
+	return nil
 }

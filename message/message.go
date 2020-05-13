@@ -122,8 +122,8 @@ func (msg *DHCPMsg) WriteToConn(conn net.Conn) error {
 }
 
 
-func BytesToDHCPMsg(data []byte) (DHCPMsg, error){
-	var msg DHCPMsg
+func BytesToDHCPMsg(data []byte) (*DHCPMsg, error){
+	msg := &DHCPMsg{}
 	var err error
 
 	msg.MsgType = MessageType(data[0])

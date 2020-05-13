@@ -1,12 +1,13 @@
 package main
 
 import (
-	"./message"
 	"bufio"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
+	toy "toy_dhcp_client"
+	"toy_dhcp_client/message"
 )
 
 var (
@@ -37,7 +38,7 @@ func main() {
 		message.DHCP_END,
 	}
 
-	client := NewClient(ints[index], ops)
+	client := toy.NewClient(ints[index], DHCP_XID, ops)
 
 	client.Run()
 }
