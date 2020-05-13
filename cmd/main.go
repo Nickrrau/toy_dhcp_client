@@ -30,7 +30,7 @@ func main() {
 	index, err := strconv.Atoi(string(input[0]))
 	fail(err)
 
-	client := toy.NewClient(ints[index], DHCP_XID, message.DefaultOps)
+	client := toy.NewClient(ints[index], DHCP_XID, message.DefaultDiscoverOps)
 
 	client.Run()
 }
