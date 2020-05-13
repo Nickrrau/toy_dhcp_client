@@ -1,7 +1,7 @@
 package toy_dhcp_client
 
 import (
-	// "fmt"
+	"fmt"
 	"net"
 	"time"
 	"toy_dhcp_client/message"
@@ -31,5 +31,7 @@ func (cl *Client) discover(ops []message.Option) error {
 	}
 
 	cl.state = DHCP_CLIENT_DISCOVERING
+	fmt.Println("=== Discover -> Server ===")
+	fmt.Print(msg.String())
 	return nil
 }

@@ -97,8 +97,6 @@ func (cl *Client) Run() error {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
 	}
-	cl.StatePrint()
-
 	offerMsg := &message.DHCPMsg{}
 	for counter := 0; ; counter++ {
 		offerMsg, err = cl.listen()
@@ -113,6 +111,9 @@ func (cl *Client) Run() error {
 	}
 	cl.StatePrint()
 
+	fmt.Println("=== Offer -> Server ===")
+	fmt.Print(offerMsg.String())
+	
 	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
 	if msgType == nil {
 		return errors.New("Malformed Response from Server: No DHCP Message Type Option")
@@ -149,7 +150,8 @@ func (cl *Client) Run() error {
 	cl.state = DHCP_CLIENT_ACKED
 	cl.StatePrint()
 
-	fmt.Println(ackMsg)
+	fmt.Println("=== Ack -> Client ===")
+	fmt.Print(ackMsg.String())
 
 	return nil
 

@@ -28,6 +28,7 @@ func (cl *Client) request(ops []message.Option) error {
 	}
 
 	cl.state = DHCP_CLIENT_REQUESTING
-
+	fmt.Println("=== Request -> Server ===")
+	fmt.Print(msg.String())
 	return nil
 }

@@ -69,7 +69,7 @@ func (msg *DHCPMsg) String() string {
 		msg.ServerAddr,
 		msg.GatewayAddr,
 		msg.ClientHardwareAddr,
-		msg.Options,
+		PrettyOptions(msg.Options),
 	)
 }
 

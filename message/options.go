@@ -1,5 +1,9 @@
 package message
 
+import (
+	"fmt"
+)
+
 type OptionCode byte
 
 const (
@@ -116,4 +120,46 @@ func FindOption(code OptionCode, ops []Option) *Option {
 		}
 	}
 	return nil
+}
+
+func PrettyOptions(ops []Option) string {
+	str := ""
+	for i := range ops {
+		str += PrettyOption(ops[i])
+	}
+	return str
+}
+
+func PrettyOption(op Option) string {
+	return fmt.Sprintf("Option Name: %v\nCode: %v\nLen: %v\nData: %v\n", PrettyCode(op.Code), op.Code, op.Len, op.Data)
+}
+
+func PrettyCode(code OptionCode) string {
+	switch code {
+		case OPTION_SUBNET_MASK :
+			return "Subnet Mask"
+		case OPTION_ROUTER         :
+			return "Router"
+		case OPTION_DNS            :
+			return "DNS Server(s)"
+		case OPTION_DOMAIN_NAME    :
+			return "DNS Server(s)"
+		case OPTION_LEASE_TIME     :
+			return "Lease Time"
+		case OPTION_REQUEST_IP     :
+			return "Request IP"
+		case OPTION_MSG_TYPE       :
+			return "Message Type"
+		case OPTION_SERVER_ID      :
+			return "Server ID"
+		case OPTION_MAX_MSG_SIZE   :
+			return "Max Message Size"
+		case OPTION_PARAM_REQ_LIST :
+			return "Param Request List"
+		case OPTION_CLIENT_ID      :
+			return "Client ID"
+		case OPTION_END            :
+			return "END"
+	}
+	return "Unsupported Option"
 }
