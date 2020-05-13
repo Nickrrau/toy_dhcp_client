@@ -1,10 +1,10 @@
 package toy_dhcp_client
 
 import (
-	"toy_dhcp_client/message"
 	"errors"
 	"fmt"
 	"net"
+	"toy_dhcp_client/message"
 )
 
 type ClientState int
@@ -21,17 +21,17 @@ const (
 	DHCP_CLIENT_FATAL
 )
 
-type DHCPClient struct {
+type Client struct {
 	state    ClientState
 	iface    net.Interface
 	ip       net.IP
 	serverIP net.IP
 	xid      []byte
-	ops      []message.DHCPOption
+	ops      []message.Option
 }
 
-func NewClient(iface net.Interface, xid []byte , ops []message.DHCPOption) *DHCPClient {
-	return &DHCPClient{
+func NewClient(iface net.Interface, xid []byte, ops []message.Option) *Client {
+	return &Client{
 		iface: iface,
 		state: DHCP_CLIENT_UNINITIALIZED,
 		ops:   ops,
@@ -39,41 +39,60 @@ func NewClient(iface net.Interface, xid []byte , ops []message.DHCPOption) *DHCP
 	}
 }
 
-func (cl *DHCPClient) IP() net.IP {
+func (cl *Client) IP() net.IP {
 	//TODO: Copy
 	return cl.ip //Possible race?
 }
-func (cl *DHCPClient) SIP() net.IP {
+func (cl *Client) SIP() net.IP {
 	//TODO: Copy
 	return cl.serverIP //Possible race?
 }
-func (cl *DHCPClient) XID() []byte {
+func (cl *Client) XID() []byte {
 	var b []byte
 	copy(b, cl.xid[:])
 	return b
 }
 
 //Connection related
-func (cl *DHCPClient) reply() {
+func (cl *Client) reply() {
 
 }
 
-func (cl *DHCPClient) acceptAck() {
+func (cl *Client) acceptAck() {
 
 }
 
-func (cl *DHCPClient) Run() error {
+func (cl *Client) Run() error {
+	fmt.Println("Sending Discovery Message")
+
 	err := cl.discover()
 	if err != nil {
 		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
 	}
 
-	for parsed, err := cl.listen(); ; {
+	offerMsg := &message.DHCPMsg{}
+	for offerMsg, err = cl.listen(); ; {
 		if err == nil {
-			fmt.Println(parsed.String())
 			break
-		} //TODO: Wait before Retry
-		//TODO: Fail on N Retries
+		}
+		if err != nil {
+			return err//TODO: Fail on N Retries
+		}		
+		//TODO: Wait before Retry
 	}
+
+	fmt.Println(offerMsg)
+
+
+	//TODO: Need to respon
+
+	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
+	if msgType == nil {
+		return errors.New("Malformed Response from Server: No DHCP Message Type Option")
+	}
+
+
+
 	return nil
+
 }
