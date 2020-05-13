@@ -91,10 +91,13 @@ func (cl *Client) acceptAck(msg *message.DHCPMsg) error {
 
 //Client.Run() starts the client and begins attempting to connect with a local DHCP server.
 func (cl *Client) Run() error {
+
+	cl.StatePrint()
 	err := cl.discover(cl.ops)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
 	}
+	cl.StatePrint()
 
 	offerMsg := &message.DHCPMsg{}
 	for counter := 0; ; counter++ {
@@ -108,6 +111,7 @@ func (cl *Client) Run() error {
 		fmt.Println("Failed, Retrying")
 		time.Sleep(time.Second)
 	}
+	cl.StatePrint()
 
 	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
 	if msgType == nil {
@@ -139,13 +143,35 @@ func (cl *Client) Run() error {
 		fmt.Println("Failed, Retrying")
 		time.Sleep(time.Second)
 	}
-
+	cl.StatePrint()
 	cl.acceptAck(ackMsg)
+	cl.StatePrint()
+	cl.state = DHCP_CLIENT_ACKED
+	cl.StatePrint()
 
 	fmt.Println(ackMsg)
 
-	cl.state = DHCP_CLIENT_ACKED
-
 	return nil
 
+}
+
+func (cl *Client) StatePrint() {
+	switch cl.state {
+	case DHCP_CLIENT_UNINITIALIZED:
+		fmt.Println("Client Is Uninitialized")
+	case DHCP_CLIENT_INITIALIZING:
+		fmt.Println("Client Is Initializing")
+	case DHCP_CLIENT_INITIALIZED:
+		fmt.Println("Client Is Initialized")
+	case DHCP_CLIENT_DISCOVERING:
+		fmt.Println("Client Is Broadcasting a Discover Message")
+	case DHCP_CLIENT_OFFERED:
+		fmt.Println("Client has recieved an Offer from server")
+	case DHCP_CLIENT_REQUESTING:
+		fmt.Println("Client Is Requesting an IP")
+	case DHCP_CLIENT_ACCEPTACK:
+		fmt.Println("Client has recieved an ACK from server")
+	case DHCP_CLIENT_ACKED:
+		fmt.Println("Client has approved an ACK from server")
+	}
 }
