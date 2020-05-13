@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 	"toy_dhcp_client/message"
 )
 
@@ -24,12 +25,14 @@ const (
 
 // Client maintains the needed state for communicating with a remote DHCP server
 type Client struct {
-	state ClientState
-	iface net.Interface
-	ip    net.IP
-	sip   net.IP
-	xid   []byte
-	ops   []message.Option
+	state     ClientState
+	iface     net.Interface
+	retry     int
+	ip        net.IP
+	leaseTime time.Duration
+	sip       net.IP
+	xid       []byte
+	ops       []message.Option
 }
 
 // NewClient() returns a pointer to a new DHCP Client initialized with the Interface, Transaction ID, and Options provided
@@ -39,7 +42,13 @@ func NewClient(iface net.Interface, xid []byte, ops []message.Option) *Client {
 		state: DHCP_CLIENT_UNINITIALIZED,
 		ops:   ops,
 		xid:   xid,
+		retry: 5,
 	}
+}
+
+// Client.State() returns the current/last state the client reported.
+func (cl *Client) State() ClientState {
+	return cl.state
 }
 
 // Client.IP() returns the IP the client has configured.
@@ -66,30 +75,39 @@ func (cl *Client) reply() {
 
 }
 
-func (cl *Client) acceptAck() {
-
+func (cl *Client) acceptAck(msg *message.DHCPMsg) error {
+	cl.state = DHCP_CLIENT_ACCEPTACK
+	msgType := message.FindOption(message.OPTION_MSG_TYPE, msg.Options)
+	if msgType == nil {
+		return errors.New("Malformed Response from Server: No DHCP Message Type Option")
+	} else if message.DHCPMessageType(msgType.Data[0]) != message.MSGTYPE_ACK {
+		if message.DHCPMessageType(msgType.Data[0]) == message.MSGTYPE_NACK {
+			return errors.New("Server NACK Response")
+		}
+		return errors.New("Wrong Response from Server: Incorrect Message Type")
+	}
+	return nil
 }
 
+//Client.Run() starts the client and begins attempting to connect with a local DHCP server.
 func (cl *Client) Run() error {
-	fmt.Println("Sending Discovery Message")
-
 	err := cl.discover(cl.ops)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
 	}
 
+	var counter = 0
+
 	offerMsg := &message.DHCPMsg{}
-	for offerMsg, err = cl.listen(); ; {
+	for offerMsg, err = cl.listen(); counter < cl.retry; counter++ {
 		if err == nil {
 			break
 		}
-		if err != nil {
-			return err //TODO: Fail on N Retries
+		if err != nil && counter < cl.retry {
+			return err
 		}
-		//TODO: Wait before Retry
+		time.Sleep(time.Second / 2)
 	}
-
-	//fmt.Println(offerMsg)
 
 	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
 	if msgType == nil {
@@ -109,28 +127,21 @@ func (cl *Client) Run() error {
 	reqOptions = append(reqOptions, message.DefaultRequestOps...)
 	cl.request(reqOptions)
 
+	counter = 0
+
 	ackMsg := &message.DHCPMsg{}
-	for ackMsg, err = cl.listen(); ; {
+	for ackMsg, err = cl.listen(); counter < cl.retry; counter++ {
 		if err == nil {
 			break
 		}
-		if err != nil {
-			return err //TODO: Fail on N Retries
+		if err != nil && counter < cl.retry {
+			return err
 		}
-		//TODO: Wait before Retry
+		time.Sleep(time.Second / 2)
 	}
 
-	msgType = message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
-	if msgType == nil {
-		return errors.New("Malformed Response from Server: No DHCP Message Type Option")
-	} else if message.DHCPMessageType(msgType.Data[0]) != message.MSGTYPE_ACK {
-		if message.DHCPMessageType(msgType.Data[0]) == message.MSGTYPE_NACK {
-			return errors.New("Server NACK Response")
-		}
-		return errors.New("Wrong Response from Server: Incorrect Message Type")
-	}
+	cl.acceptAck(ackMsg)
 
-	cl.state = DHCP_CLIENT_ACCEPTACK
 	fmt.Println(ackMsg)
 
 	cl.state = DHCP_CLIENT_ACKED
