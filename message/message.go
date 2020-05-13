@@ -36,7 +36,7 @@ type DHCPMsg struct {
 
 	Magic []byte
 
-	Options []DHCPOption
+	Options []Option
 
 	RawBody    []byte
 	RawOptions []byte
@@ -73,7 +73,7 @@ func (msg *DHCPMsg) String() string {
 	)
 }
 
-func NewDiscoverMsg(xid, hwaddr []byte, ops []DHCPOption) *DHCPMsg {
+func NewDiscoverMsg(xid, hwaddr []byte, ops []Option) *DHCPMsg {
 	msg := NewDHCPMsg()
 	msg.MsgType = BOOT_REQEUST
 	msg.HardwareType = ETHERNET
