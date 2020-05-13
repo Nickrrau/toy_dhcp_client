@@ -76,22 +76,19 @@ func (cl *Client) Run() error {
 			break
 		}
 		if err != nil {
-			return err//TODO: Fail on N Retries
-		}		
+			return err //TODO: Fail on N Retries
+		}
 		//TODO: Wait before Retry
 	}
 
-	fmt.Println(offerMsg)
-
-
-	//TODO: Need to respon
+	//fmt.Println(offerMsg)
 
 	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
 	if msgType == nil {
 		return errors.New("Malformed Response from Server: No DHCP Message Type Option")
+	} else if message.DHCPMessageType(msgType.Data[0]) != message.MSGTYPE_OFFER {
+		return errors.New("Wrong Response from Server: Incorrect Message Type")
 	}
-
-
 
 	return nil
 
