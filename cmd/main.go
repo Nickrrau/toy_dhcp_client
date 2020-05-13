@@ -17,7 +17,10 @@ var (
 func main() {
 
 	ints, err := net.Interfaces()
-	fail(err)
+	if err != nil {
+		fmt.Printf("Failed to list Interfaces: %v", err)
+		os.Exit(1)
+	}
 	fmt.Print("Select Interface to Use:\n")
 	for i := range ints {
 		fmt.Printf("[%v] %v (%v)\n", i, ints[i].Name, ints[i].HardwareAddr)
@@ -26,18 +29,21 @@ func main() {
 
 	inputReader := bufio.NewReader(os.Stdin)
 	input, err := inputReader.ReadString('\n')
-	fail(err)
+	if err != nil {
+		fmt.Printf("Failed to list Interfaces: %v", err)
+		os.Exit(2)
+	}
 	index, err := strconv.Atoi(string(input[0]))
-	fail(err)
+	if err != nil {
+		fmt.Printf("Failed to list Interfaces: %v", err)
+		os.Exit(3)
+	}
 
 	client := toy.NewClient(ints[index], DHCP_XID, message.DefaultDiscoverOps)
 
-	client.Run()
-}
-
-func fail(err error) {
+	err = client.Run()
 	if err != nil {
-		fmt.Printf("Failed to list Interfaces: %v", err)
-		os.Exit(1)
+		fmt.Printf("Client Failed\nLast State: %v\nError: %v\n", client.State(), err)
+		os.Exit(4)
 	}
 }
