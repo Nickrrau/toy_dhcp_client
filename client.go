@@ -96,17 +96,17 @@ func (cl *Client) Run() error {
 		return errors.New(fmt.Sprintf("Discovery Failed, closing Client\nErr:%v", err))
 	}
 
-	var counter = 0
-
 	offerMsg := &message.DHCPMsg{}
-	for offerMsg, err = cl.listen(); counter < cl.retry; counter++ {
+	for counter := 0; ; counter++ {
+		offerMsg, err = cl.listen()
 		if err == nil {
 			break
 		}
-		if err != nil && counter < cl.retry {
+		if err != nil && counter >= cl.retry {
 			return err
 		}
-		time.Sleep(time.Second / 2)
+		fmt.Println("Failed, Retrying")
+		time.Sleep(time.Second)
 	}
 
 	msgType := message.FindOption(message.OPTION_MSG_TYPE, offerMsg.Options)
@@ -127,17 +127,17 @@ func (cl *Client) Run() error {
 	reqOptions = append(reqOptions, message.DefaultRequestOps...)
 	cl.request(reqOptions)
 
-	counter = 0
-
 	ackMsg := &message.DHCPMsg{}
-	for ackMsg, err = cl.listen(); counter < cl.retry; counter++ {
+	for counter := 0; ; counter++ {
+		ackMsg, err = cl.listen()
 		if err == nil {
 			break
 		}
-		if err != nil && counter < cl.retry {
+		if err != nil && counter >= cl.retry {
 			return err
 		}
-		time.Sleep(time.Second / 2)
+		fmt.Println("Failed, Retrying")
+		time.Sleep(time.Second)
 	}
 
 	cl.acceptAck(ackMsg)
